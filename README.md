@@ -1,2 +1,3 @@
-# webapp
-Metamask web app calling the loan contract
+# Metamask Web app
+- Making loan collateral requests
+- Verifying proof
