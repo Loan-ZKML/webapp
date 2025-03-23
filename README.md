@@ -1,9 +1,9 @@
-# Metamask Web app
-- Making loan collateral requests
-- Verifying proof
 
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+- `types/zkml.ts` defines types for app.
+- `service/ContractService.ts` handles smart contract interactions
+
+
 
 ## Getting Started
 
