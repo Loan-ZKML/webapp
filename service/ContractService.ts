@@ -9,7 +9,7 @@ declare global {
 import { ethers } from 'ethers';
 import { MetaMaskInpageProvider } from "@metamask/providers"; // supports legacy provider interfaces and EIP-1193
 import { CreditApplicant } from '@/types/zkml';
-import { CreditTier, CollateralRequirement } from '@/types/contracts'
+import { CreditTier, CollateralRequirement } from '@/types/contract'
 import { LOAN_MANAGER_ABI } from './abi/CreditScoreLoanManager';
 
 const CONTRACT_ADDRESS = 'TODO'; // TODO: deploy & get contract address
@@ -21,6 +21,7 @@ export class ContractService {
     private contract: ethers.Contract | null = null; // the deployed contract
     private signer: ethers.Signer | null = null; // the user's account
     private readonly chainId = SEPOLIA_CHAIN_ID; // TODO currently sepolia
+    private connecting: boolean = false; // Add this line
 
     constructor() {
         if (typeof window !== 'undefined' && window.ethereum) {
@@ -66,6 +67,10 @@ export class ContractService {
 
     // Initialize the connection to the contract
     async connect(): Promise<boolean> {
+        if (this.connecting) {
+            return false; // Already attempting to connect
+        }
+
         if (typeof window === 'undefined' || !window.ethereum) {
             console.error('Ethereum provider not available. Please install MetaMask.');
             return false;
@@ -77,6 +82,7 @@ export class ContractService {
         }
 
         try {
+            this.connecting = true;
             const accounts = await window.ethereum.request({
                 method: 'eth_requestAccounts'
             }) as string[];
@@ -118,10 +124,9 @@ export class ContractService {
             return true;
         } catch (error: any) {
             console.error('Failed to connect:', error?.message || error);
-            if (error.code === 4001) {
-                console.error('User rejected the connection request');
-            }
             return false;
+        } finally {
+            this.connecting = false;
         }
     }
 
