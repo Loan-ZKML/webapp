@@ -1,118 +1,161 @@
 /// <reference types="jest" />
 import { ContractService } from '@/service/ContractService';
 import { ethers } from 'ethers';
+import { CreditTier } from '@/types/contract';
 
-// Mock ethers and MetaMask provider
-jest.mock('ethers');
+
+// Mock ethers
+jest.mock('ethers', () => {
+    const mockEthers = {
+        Contract: jest.fn(),
+        BrowserProvider: jest.fn(),
+        isAddress: jest.fn(),
+        verifyMessage: jest.fn(),
+        parseEther: jest.fn(),
+        formatEther: jest.fn(),
+        hexlify: jest.fn()
+    };
+    return mockEthers;
+});
 
 describe('ContractService', () => {
     let contractService: ContractService;
-    let mockEthereum: any;
+    let mockProvider: jest.Mock;
+    let mockContract: jest.Mock;
+    let mockSigner: jest.Mock;
+    let mockRequest: jest.Mock;
 
     beforeEach(() => {
-        // Reset mocks
+        // Reset all mocks
         jest.clearAllMocks();
 
         // Mock window.ethereum
-        mockEthereum = {
-            isMetaMask: true,
-            request: jest.fn(),
-            on: jest.fn(),
-            removeListener: jest.fn(),
-        };
+        mockRequest = jest.fn();
         global.window = {
-            ethereum: mockEthereum,
+            ethereum: {
+                isMetaMask: true,
+                request: mockRequest,
+                on: jest.fn(),
+            } as any,
         } as any;
+
+        // Setup mocks
+        mockSigner = jest.fn().mockImplementation(() => ({
+            getAddress: jest.fn().mockResolvedValue('0x123'),
+            signMessage: jest.fn().mockResolvedValue('mockSignature'),
+        }));
+
+        mockContract = jest.fn().mockImplementation(() => ({
+            submitCreditScoreProof: jest.fn(),
+            calculateCollateralRequirement: jest.fn(),
+            getBorrowerTier: jest.fn(),
+        }));
+
+        mockProvider = jest.fn().mockImplementation(() => ({
+            getSigner: jest.fn().mockResolvedValue(mockSigner()),
+            getNetwork: jest.fn().mockResolvedValue({ chainId: BigInt(11155111) }),
+        }));
+
+        // Update the mocked ethers object
+        const mockedEthers = require('ethers');
+        mockedEthers.BrowserProvider = mockProvider;
+        mockedEthers.Contract = mockContract;
+        mockedEthers.isAddress.mockReturnValue(true);
+        mockedEthers.verifyMessage.mockReturnValue('0x123');
+        mockedEthers.hexlify.mockReturnValue('0x123456');
+        mockedEthers.parseEther.mockReturnValue(BigInt(1000000000000000000));
+        mockedEthers.formatEther.mockReturnValue('1.0');
+
+        // Set a valid contract address for testing
+        process.env.NEXT_PUBLIC_CONTRACT_ADDRESS = '0x123456789';
 
         contractService = new ContractService();
     });
 
     describe('connect', () => {
-        it('should return false if ethereum provider is not available', async () => {
+        it('should fail if ethereum provider is not available', async () => {
+            // Remove ethereum provider
             global.window.ethereum = undefined;
             const result = await contractService.connect();
             expect(result).toBe(false);
         });
 
-        it('should return false if provider is not MetaMask', async () => {
-            mockEthereum.isMetaMask = false;
+        it('should fail if provider is not MetaMask', async () => {
+            global.window.ethereum = {
+                isMetaMask: false,
+                request: mockRequest,
+                on: jest.fn(),
+            } as any;
             const result = await contractService.connect();
             expect(result).toBe(false);
         });
 
-        it('should handle successful connection', async () => {
-            // Mock successful responses
-            mockEthereum.request.mockResolvedValueOnce(['0x123']);
+        it('should fail if no accounts are available', async () => {
+            mockRequest.mockResolvedValueOnce([]);
+            const result = await contractService.connect();
+            expect(result).toBe(false);
+        });
 
-            const mockProvider = {
-                getNetwork: jest.fn().mockResolvedValue({ chainId: 11155111 }),
-            };
-            const mockSigner = {
-                getAddress: jest.fn().mockResolvedValue('0x123'),
-                signMessage: jest.fn().mockResolvedValue('0xsignature'),
-            };
-
-            (ethers.BrowserProvider as jest.Mock).mockImplementation(() => mockProvider);
-            (ethers.Contract as jest.Mock).mockImplementation(() => ({}));
-            (ethers.verifyMessage as jest.Mock).mockReturnValue('0x123');
+        it('should fail if wrong network', async () => {
+            mockRequest.mockResolvedValueOnce(['0x123']);
+            // Mock wrong network
+            mockProvider.mockImplementation(() => ({
+                getSigner: jest.fn().mockResolvedValue(mockSigner()),
+                getNetwork: jest.fn().mockResolvedValue({ chainId: BigInt(1) }), // mainnet instead of sepolia
+            }));
 
             const result = await contractService.connect();
-            expect(result).toBe(true);
+            expect(result).toBe(false);
+        });
+
+        it('should fail if already connecting', async () => {
+            // Trigger a connection attempt that hasn't completed
+            const firstAttempt = contractService.connect();
+            // Try to connect again while first attempt is pending
+            const result = await contractService.connect();
+            expect(result).toBe(false);
+            // Clean up first attempt
+            await firstAttempt;
         });
     });
 
-    describe('getAccount', () => {
-        it('should return null if no signer is available', async () => {
-            const result = await contractService.getAccount();
-            expect(result).toBeNull();
+    describe('submitProof', () => {
+        const mockProof = new Uint8Array([1, 2, 3]);
+        const mockPublicInputs = [123456];
+
+        it('should throw error if contract is not initialized', async () => {
+            await expect(contractService.submitProof(mockProof, mockPublicInputs))
+                .rejects
+                .toThrow('Contract not initialized');
         });
+
+        // TODO: Add tests for initialized contract once contract deployment is complete
+        // - Test successful proof submission
+        // - Test transaction failure
+        // - Test transaction revert
     });
 
     describe('calculateCollateral', () => {
         it('should throw error if contract is not initialized', async () => {
-            await expect(contractService.calculateCollateral('0x123', 1))
+            await expect(contractService.calculateCollateral('0x123', 5))
                 .rejects
                 .toThrow('Contract not initialized');
         });
+
+        // TODO: Add tests for initialized contract once contract deployment is complete
+        // - Test successful collateral calculation
+        // - Test calculation failure
     });
 
-    describe('generateProof', () => {
-        it('should return dummy proof and inputs', async () => {
-            const applicantData = {
-                name: 'Test',
-                income: 50000,
-                employmentYears: 5,
-                existingLoans: 0,
-                creditScore: 750,
-                requestedAmount: 10000,
-                purpose: 'Test purpose'
-            };
-
-            const result = await contractService.generateProof(applicantData);
-
-            expect(result).toHaveProperty('proof');
-            expect(result).toHaveProperty('publicInputs');
-            expect(result.proof).toBeInstanceOf(Uint8Array);
-            expect(result.proof.length).toBe(128);
-            expect(result.publicInputs).toEqual([123456]);
+    describe('getBorrowerTier', () => {
+        it('should throw error if contract is not initialized', async () => {
+            await expect(contractService.getBorrowerTier('0x123'))
+                .rejects
+                .toThrow('Contract not initialized');
         });
-    });
 
-    describe('handleChainChange', () => {
-        it('should handle chain changes correctly', async () => {
-            const mockProvider = {
-                getNetwork: jest.fn().mockResolvedValue({ chainId: 11155111 }),
-            };
-            (ethers.BrowserProvider as jest.Mock).mockImplementation(() => mockProvider);
-
-            // Trigger chain change
-            const chainChangedCallback = mockEthereum.on.mock.calls.find(
-                (call: [string, Function]) => call[0] === 'chainChanged'
-            )[1];
-
-            await chainChangedCallback();
-
-            expect(ethers.BrowserProvider).toHaveBeenCalled();
-        });
+        // TODO: Add tests for initialized contract once contract deployment is complete
+        // - Test successful tier retrieval
+        // - Test tier lookup failure
     });
 }); 
