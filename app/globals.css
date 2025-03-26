@@ -22,6 +22,6 @@
 body {
   padding: 0;
   margin: 0;
-  @apply min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900;
+  @apply min-h-screen bg-gradient-to-br from-indigo-900 via-purple-300 to-white;
   font-family: var(--font-sans);
 }
