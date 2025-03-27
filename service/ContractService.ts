@@ -43,6 +43,28 @@ export class ContractService {
         return false;
     }
 
+    /**
+     * Submits a proof and returns the transaction response object
+     * for better tracking of the transaction status
+     */
+    async submitProofAndGetTransaction(proof: Uint8Array, publicInputs: number[]): Promise<ethers.TransactionResponse | null> {
+        if (!this.contract) {
+            throw new Error('Contract not initialized');
+        }
+
+        try {
+            const proofBytes = ethers.hexlify(proof);
+            const inputs = publicInputs.map(input => BigInt(input));
+            
+            // Return the transaction response instead of waiting for confirmation
+            const tx = await this.contract.submitCreditScoreProof(proofBytes, inputs);
+            return tx;
+        } catch (error) {
+            console.error('Internal error:', error);
+            throw new Error('Failed to process transaction');
+        }
+    }
+
     async submitProof(proof: Uint8Array, publicInputs: number[]): Promise<boolean> {
         if (!this.contract) {
             throw new Error('Contract not initialized');

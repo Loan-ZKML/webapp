@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Upload, FileCode, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Upload, FileCode, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { contractService } from '@/service/ContractService';
 import { ProofParserService } from '@/service/ProofParserService';
 
@@ -14,22 +14,26 @@ interface SubmissionState {
     calldataText: string;
     isUploading: boolean;
     isSubmitting: boolean;
+    isSubmitted: boolean; // New state to track if transaction has been submitted successfully
     errorMessage: string;
     successMessage: string;
     collateralDetails: CollateralDetails | null;
     fileName: string | null;
     bytesRead: number | null;
+    transactionHash: string | null; // Add to store transaction hash
 }
 
 const initialState: SubmissionState = {
     calldataText: '',
     isUploading: false,
     isSubmitting: false,
+    isSubmitted: false, // Initialize as false
     errorMessage: '',
     successMessage: '',
     collateralDetails: null,
     fileName: null,
     bytesRead: null,
+    transactionHash: null, // Initialize as null
 };
 
 const ProofSubmission = () => {
@@ -85,6 +89,7 @@ const ProofSubmission = () => {
 
     const handleSubmit = async () => {
         resetMessages();
+        updateState({ isSubmitted: false, transactionHash: null }); // Reset submission state
 
         if (!state.calldataText.trim()) {
             updateState({ errorMessage: 'Please provide calldata first' });
@@ -107,20 +112,48 @@ const ProofSubmission = () => {
                 throw new Error('Failed to connect to wallet. Please try again.');
             }
 
-            const success = await contractService.submitProof(
+            // Submit proof and capture transaction hash
+            const transactionResponse = await contractService.submitProofAndGetTransaction(
                 validationResult.data.proof,
                 validationResult.data.publicInputs
             );
 
-            if (success) {
-                updateState({ successMessage: 'Proof submitted successfully!' });
-                const address = await contractService.getAccount();
-                if (address) {
-                    await fetchCollateralDetails(address);
+            if (transactionResponse && transactionResponse.hash) {
+                // Store transaction hash
+                updateState({
+                    transactionHash: transactionResponse.hash,
+                    successMessage: 'Transaction sent! Waiting for confirmation...'
+                });
+
+                // Wait for transaction to be confirmed
+                const receipt = await transactionResponse.wait(1);
+
+                if (!receipt) {
+                    updateState({
+                        errorMessage: 'Transaction failed to confirm. Please check your transaction status.'
+                    });
+                    return;
+                }
+
+                if (receipt.status === 1) {
+                    updateState({
+                        isSubmitted: true,
+                        isSubmitting: false,
+                        successMessage: 'Proof verified and submitted successfully!'
+                    });
+
+                    const address = await contractService.getAccount();
+                    if (address) {
+                        await fetchCollateralDetails(address);
+                    }
+                } else {
+                    updateState({
+                        errorMessage: 'Transaction failed. Please check your proof data.'
+                    });
                 }
             } else {
                 updateState({
-                    errorMessage: 'Proof verification failed. Please check your proof data.'
+                    errorMessage: 'Failed to submit transaction. Please try again.'
                 });
             }
         } catch (error: any) {
@@ -133,34 +166,48 @@ const ProofSubmission = () => {
         }
     };
 
+    const handleReset = () => {
+        setState(initialState);
+    };
+
     return (
         <div className="space-y-4">
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
                 <h3 className="text-lg font-semibold text-indigo-800 mb-3">Submit Proof</h3>
 
                 <div className="space-y-4">
-                    <FileUploadSection
-                        fileName={state.fileName}
-                        isUploading={state.isUploading}
-                        isSubmitting={state.isSubmitting}
-                        onUpload={handleFileUpload}
-                    />
+                    {!state.isSubmitted ? (
+                        <>
+                            <FileUploadSection
+                                fileName={state.fileName}
+                                isUploading={state.isUploading}
+                                isSubmitting={state.isSubmitting}
+                                onUpload={handleFileUpload}
+                            />
 
-                    <FileDetailsSection
-                        fileName={state.fileName}
-                        bytesRead={state.bytesRead}
-                    />
+                            <FileDetailsSection
+                                fileName={state.fileName}
+                                bytesRead={state.bytesRead}
+                            />
 
-                    <SubmitButton
-                        isSubmitting={state.isSubmitting}
-                        disabled={!state.calldataText}
-                        onClick={handleSubmit}
-                    />
+                            <SubmitButton
+                                isSubmitting={state.isSubmitting}
+                                disabled={!state.calldataText || state.isSubmitting}
+                                onClick={handleSubmit}
+                            />
+                        </>
+                    ) : (
+                        <SuccessSection
+                            collateralDetails={state.collateralDetails}
+                            transactionHash={state.transactionHash}
+                            onReset={handleReset}
+                        />
+                    )}
 
                     <StatusMessages
                         errorMessage={state.errorMessage}
                         successMessage={state.successMessage}
-                        collateralDetails={state.collateralDetails}
+                        isSubmitted={state.isSubmitted}
                     />
                 </div>
             </div>
@@ -225,42 +272,97 @@ const SubmitButton = ({ isSubmitting, disabled, onClick }: {
     <button
         className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
         onClick={onClick}
-        disabled={disabled || isSubmitting}
+        disabled={disabled}
     >
-        <FileCode size={20} />
-        {isSubmitting ? 'Submitting...' : 'Submit Proof'}
+        {isSubmitting ? (
+            <>
+                <RefreshCw size={20} className="animate-spin" />
+                Submitting...
+            </>
+        ) : (
+            <>
+                <FileCode size={20} />
+                Submit Proof
+            </>
+        )}
     </button>
 );
 
-const StatusMessages = ({ errorMessage, successMessage, collateralDetails }: {
+const SuccessSection = ({ collateralDetails, transactionHash, onReset }: {
+    collateralDetails: CollateralDetails | null;
+    transactionHash: string | null;
+    onReset: () => void;
+}) => (
+    <div className="space-y-4">
+        <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex flex-col items-center">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <CheckCircle size={24} className="text-green-600" />
+            </div>
+
+            <h3 className="text-lg font-semibold text-green-800 mb-1">Proof Verified!</h3>
+            <p className="text-sm text-green-600 text-center mb-4">
+                Your zero-knowledge proof has been verified and recorded on-chain.
+            </p>
+
+            {collateralDetails && (
+                <div className="w-full bg-white p-3 rounded-lg border border-green-100 mb-3">
+                    <h4 className="font-medium text-green-800 mb-2">Your New Collateral Requirement:</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-green-50 p-2 rounded">
+                            <p className="text-xs text-green-600">Amount</p>
+                            <p className="text-lg font-semibold text-green-800">{collateralDetails.amount} ETH</p>
+                        </div>
+                        <div className="bg-green-50 p-2 rounded">
+                            <p className="text-xs text-green-600">Percentage</p>
+                            <p className="text-lg font-semibold text-green-800">{collateralDetails.percentage}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {transactionHash && (
+                <div className="w-full mb-3">
+                    <p className="text-xs text-green-600 mb-1">Transaction Hash:</p>
+                    <code className="block w-full bg-white text-xs p-2 rounded border border-green-100 overflow-x-auto">
+                        {transactionHash}
+                    </code>
+                </div>
+            )}
+
+            <button
+                onClick={onReset}
+                className="mt-2 px-4 py-2 bg-white text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+            >
+                Submit Another Proof
+            </button>
+        </div>
+    </div>
+);
+
+const StatusMessages = ({ errorMessage, successMessage, isSubmitted }: {
     errorMessage: string;
     successMessage: string;
-    collateralDetails: CollateralDetails | null;
-}) => (
-    <>
-        {errorMessage && (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
-                <AlertTriangle size={18} />
-                <p>{errorMessage}</p>
-            </div>
-        )}
+    isSubmitted: boolean;
+}) => {
+    if (isSubmitted) return null; // Don't show status messages when in success state
 
-        {successMessage && (
-            <div className="flex items-start gap-2 text-green-600 bg-green-50 p-3 rounded-lg border border-green-100">
-                <CheckCircle size={18} className="mt-0.5 flex-shrink-0" />
-                <div>
-                    <p>{successMessage}</p>
-                    {collateralDetails && (
-                        <div className="mt-2 text-sm">
-                            <p className="font-semibold">Your New Collateral Requirement:</p>
-                            <p>Amount: {collateralDetails.amount} ETH</p>
-                            <p>Percentage: {collateralDetails.percentage}</p>
-                        </div>
-                    )}
+    return (
+        <>
+            {errorMessage && (
+                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                    <AlertTriangle size={18} />
+                    <p>{errorMessage}</p>
                 </div>
-            </div>
-        )}
-    </>
-);
+            )}
+
+            {successMessage && !isSubmitted && (
+                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <RefreshCw size={18} className="animate-spin" />
+                    <p>{successMessage}</p>
+                </div>
+            )}
+        </>
+    );
+};
 
 export default ProofSubmission;
