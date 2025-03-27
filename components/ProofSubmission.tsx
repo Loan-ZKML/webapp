@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Upload, FileCode, CheckCircle, AlertTriangle } from 'lucide-react';
 import { contractService } from '@/service/ContractService';
-import { ProofParserService } from '@/services/ProofParserService';
+import { ProofParserService } from '@/service/ProofParserService';
 
 const proofParser = new ProofParserService();
 
