@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Upload, FileCode, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { contractService } from '@/service/ContractService';
 import { ProofParserService } from '@/service/ProofParserService';
+import InfoBox from '@/components/InfoBox';
+import CollateralSection from '@/components/CollateralDisplay';
 
 // Types
 interface CollateralDetails {
@@ -14,26 +16,26 @@ interface SubmissionState {
     calldataText: string;
     isUploading: boolean;
     isSubmitting: boolean;
-    isSubmitted: boolean; // New state to track if transaction has been submitted successfully
+    isSubmitted: boolean; 
     errorMessage: string;
     successMessage: string;
     collateralDetails: CollateralDetails | null;
     fileName: string | null;
     bytesRead: number | null;
-    transactionHash: string | null; // Add to store transaction hash
+    transactionHash: string | null;
 }
 
 const initialState: SubmissionState = {
     calldataText: '',
     isUploading: false,
     isSubmitting: false,
-    isSubmitted: false, // Initialize as false
+    isSubmitted: false,
     errorMessage: '',
     successMessage: '',
     collateralDetails: null,
     fileName: null,
     bytesRead: null,
-    transactionHash: null, // Initialize as null
+    transactionHash: null,
 };
 
 const ProofSubmission = () => {
@@ -48,7 +50,6 @@ const ProofSubmission = () => {
         updateState({
             errorMessage: '',
             successMessage: '',
-            collateralDetails: null,
         });
     };
 
@@ -89,7 +90,7 @@ const ProofSubmission = () => {
 
     const handleSubmit = async () => {
         resetMessages();
-        updateState({ isSubmitted: false, transactionHash: null }); // Reset submission state
+        updateState({ isSubmitted: false, transactionHash: null });
 
         if (!state.calldataText.trim()) {
             updateState({ errorMessage: 'Please provide calldata first' });
@@ -119,7 +120,6 @@ const ProofSubmission = () => {
             );
 
             if (transactionResponse && transactionResponse.hash) {
-                // Store transaction hash
                 updateState({
                     transactionHash: transactionResponse.hash,
                     successMessage: 'Transaction sent! Waiting for confirmation...'
@@ -170,47 +170,54 @@ const ProofSubmission = () => {
         setState(initialState);
     };
 
+    // Render submission form or success state
+    if (state.isSubmitted) {
+        return <SuccessSection 
+            collateralDetails={state.collateralDetails} 
+            transactionHash={state.transactionHash} 
+            onReset={handleReset} 
+        />;
+    }
+
     return (
-        <div className="space-y-4">
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
-                <h3 className="text-lg font-semibold text-indigo-800 mb-3">Submit Proof</h3>
+        <div className="space-y-6">
+            {/* Check collateral section - show only when not in submission process */}
+            {!state.isSubmitting && <CollateralSection />}
 
-                <div className="space-y-4">
-                    {!state.isSubmitted ? (
-                        <>
-                            <FileUploadSection
-                                fileName={state.fileName}
-                                isUploading={state.isUploading}
-                                isSubmitting={state.isSubmitting}
-                                onUpload={handleFileUpload}
-                            />
+            {/* Proof submission section */}
+            <InfoBox
+                title="Submit Zero-Knowledge Proof"
+                description="Upload your proof file to verify your credit score without revealing sensitive information."
+                variant="indigo"
+                className="mt-6"
+            >
+                <div className="space-y-4 mt-3">
+                    <FileUploadSection
+                        fileName={state.fileName}
+                        isUploading={state.isUploading}
+                        isSubmitting={state.isSubmitting}
+                        onUpload={handleFileUpload}
+                    />
 
-                            <FileDetailsSection
-                                fileName={state.fileName}
-                                bytesRead={state.bytesRead}
-                            />
-
-                            <SubmitButton
-                                isSubmitting={state.isSubmitting}
-                                disabled={!state.calldataText || state.isSubmitting}
-                                onClick={handleSubmit}
-                            />
-                        </>
-                    ) : (
-                        <SuccessSection
-                            collateralDetails={state.collateralDetails}
-                            transactionHash={state.transactionHash}
-                            onReset={handleReset}
+                    {state.fileName && state.bytesRead && (
+                        <FileDetailsSection
+                            fileName={state.fileName}
+                            bytesRead={state.bytesRead}
                         />
                     )}
+
+                    <SubmitButton
+                        isSubmitting={state.isSubmitting}
+                        disabled={!state.calldataText || state.isSubmitting}
+                        onClick={handleSubmit}
+                    />
 
                     <StatusMessages
                         errorMessage={state.errorMessage}
                         successMessage={state.successMessage}
-                        isSubmitted={state.isSubmitted}
                     />
                 </div>
-            </div>
+            </InfoBox>
         </div>
     );
 };
@@ -249,20 +256,16 @@ const FileUploadSection = ({ fileName, isUploading, isSubmitting, onUpload }: {
 const FileDetailsSection = ({ fileName, bytesRead }: {
     fileName: string | null;
     bytesRead: number | null;
-}) => {
-    if (!fileName || !bytesRead) return null;
-
-    return (
-        <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-            <p className="text-sm text-indigo-700 font-medium">File loaded: {fileName}</p>
-            <p className="text-xs text-indigo-500 mt-1">
-                {bytesRead > 0
-                    ? `${bytesRead} bytes of binary data read`
-                    : 'No valid binary data found'}
-            </p>
-        </div>
-    );
-};
+}) => (
+    <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+        <p className="text-sm text-indigo-700 font-medium">File loaded: {fileName}</p>
+        <p className="text-xs text-indigo-500 mt-1">
+            {bytesRead !== null && bytesRead > 0
+                ? `${bytesRead} bytes of binary data read`
+                : 'No valid binary data found'}
+        </p>
+    </div>
+);
 
 const SubmitButton = ({ isSubmitting, disabled, onClick }: {
     isSubmitting: boolean;
@@ -270,7 +273,7 @@ const SubmitButton = ({ isSubmitting, disabled, onClick }: {
     onClick: () => void;
 }) => (
     <button
-        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
         onClick={onClick}
         disabled={disabled}
     >
@@ -288,81 +291,81 @@ const SubmitButton = ({ isSubmitting, disabled, onClick }: {
     </button>
 );
 
-const SuccessSection = ({ collateralDetails, transactionHash, onReset }: {
+const StatusMessages = ({ errorMessage, successMessage }: {
+    errorMessage: string;
+    successMessage: string;
+}) => (
+    <>
+        {errorMessage && (
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                <AlertTriangle size={18} />
+                <p>{errorMessage}</p>
+            </div>
+        )}
+
+        {successMessage && (
+            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <RefreshCw size={18} className="animate-spin" />
+                <p>{successMessage}</p>
+            </div>
+        )}
+    </>
+);
+
+// Success section as a separate component with upgraded styling
+const SuccessSection = ({ 
+    collateralDetails, 
+    transactionHash, 
+    onReset 
+}: {
     collateralDetails: CollateralDetails | null;
     transactionHash: string | null;
     onReset: () => void;
 }) => (
-    <div className="space-y-4">
-        <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex flex-col items-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                <CheckCircle size={24} className="text-green-600" />
-            </div>
-
-            <h3 className="text-lg font-semibold text-green-800 mb-1">Proof Verified!</h3>
-            <p className="text-sm text-green-600 text-center mb-4">
-                Your zero-knowledge proof has been verified and recorded on-chain.
-            </p>
-
-            {collateralDetails && (
-                <div className="w-full bg-white p-3 rounded-lg border border-green-100 mb-3">
-                    <h4 className="font-medium text-green-800 mb-2">Your New Collateral Requirement:</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-green-50 p-2 rounded">
-                            <p className="text-xs text-green-600">Amount</p>
-                            <p className="text-lg font-semibold text-green-800">{collateralDetails.amount} ETH</p>
-                        </div>
-                        <div className="bg-green-50 p-2 rounded">
-                            <p className="text-xs text-green-600">Percentage</p>
-                            <p className="text-lg font-semibold text-green-800">{collateralDetails.percentage}</p>
+    <div className="space-y-6">
+        <InfoBox
+            title="Proof Verification Successful!"
+            description="Your zero-knowledge proof has been verified and recorded on-chain."
+            variant="teal"
+            icon={CheckCircle}
+            className="mt-6"
+        >
+            <div className="space-y-4 mt-3">
+                {collateralDetails && (
+                    <div className="bg-teal-50/70 p-4 rounded-lg border border-teal-100">
+                        <h4 className="font-medium text-teal-800 mb-2">Your New Collateral Requirement:</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-teal-100/50 p-3 rounded">
+                                <p className="text-xs text-teal-600">Amount</p>
+                                <p className="text-lg font-semibold text-teal-800">{collateralDetails.amount} ETH</p>
+                            </div>
+                            <div className="bg-teal-100/50 p-3 rounded">
+                                <p className="text-xs text-teal-600">Percentage</p>
+                                <p className="text-lg font-semibold text-teal-800">{collateralDetails.percentage}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {transactionHash && (
-                <div className="w-full mb-3">
-                    <p className="text-xs text-green-600 mb-1">Transaction Hash:</p>
-                    <code className="block w-full bg-white text-xs p-2 rounded border border-green-100 overflow-x-auto">
-                        {transactionHash}
-                    </code>
-                </div>
-            )}
+                {transactionHash && (
+                    <div>
+                        <p className="text-xs text-teal-600 mb-1">Transaction Hash:</p>
+                        <code className="block w-full bg-white text-xs p-2 rounded border border-teal-100 overflow-x-auto">
+                            {transactionHash}
+                        </code>
+                    </div>
+                )}
 
-            <button
-                onClick={onReset}
-                className="mt-2 px-4 py-2 bg-white text-green-600 border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
-            >
-                Submit Another Proof
-            </button>
-        </div>
+                <button
+                    onClick={onReset}
+                    className="mt-4 w-full px-4 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg hover:from-teal-600 hover:to-emerald-600 transition-colors flex items-center justify-center gap-2"
+                >
+                    <RefreshCw size={18} />
+                    Submit Another Proof
+                </button>
+            </div>
+        </InfoBox>
     </div>
 );
-
-const StatusMessages = ({ errorMessage, successMessage, isSubmitted }: {
-    errorMessage: string;
-    successMessage: string;
-    isSubmitted: boolean;
-}) => {
-    if (isSubmitted) return null; // Don't show status messages when in success state
-
-    return (
-        <>
-            {errorMessage && (
-                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
-                    <AlertTriangle size={18} />
-                    <p>{errorMessage}</p>
-                </div>
-            )}
-
-            {successMessage && !isSubmitted && (
-                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <RefreshCw size={18} className="animate-spin" />
-                    <p>{successMessage}</p>
-                </div>
-            )}
-        </>
-    );
-};
 
 export default ProofSubmission;

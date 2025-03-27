@@ -34,7 +34,7 @@ const Home = () => {
           >
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-indigo-800">Request Lower Collateral</h2>
+                <h2 className="text-xl font-semibold text-indigo-800">Request Smart Collateral</h2>
                 <p className="text-indigo-600/70 text-sm mt-1">Step-by-step submission of request</p>
               </div>
               <div className="bg-indigo-600 text-white p-2 rounded-full transform transition-transform group-hover:rotate-12">

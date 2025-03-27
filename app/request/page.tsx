@@ -7,13 +7,13 @@ import InfoBox from '@/components/InfoBox';
 import NavigationBox from '@/components/NavigationBox';
 import NavBar from '@/components/NavBar';
 import Title from '@/components/Title';
-import ProofSubmission from '@/components/ProofSubmission'; // Import the new component
+import ProofSubmission from '@/components/ProofSubmission';
 
 const RequestPage = () => {
     const steps = [
         { text: 'Connect your Ethereum wallet' },
-        { text: 'Submit your proof information' },
-        { text: 'Get your personalized collateral requirement' }
+        { text: 'Check your current collateral requirements' },
+        { text: 'Submit your creditworthiness proof to improve your terms' }
     ];
 
     return (
@@ -22,8 +22,8 @@ const RequestPage = () => {
                 <NavBar backLink='/' />
 
                 <Title
-                    title="Request Lowered Collateral"
-                    subtitle="Get personalized collateral requirements using zero-knowledge proofs"
+                    title="Request Smart Collateral"
+                    subtitle="Get personalized loan terms using zero-knowledge proofs"
                 />
 
                 <InfoBox
@@ -36,16 +36,15 @@ const RequestPage = () => {
                             <div key={index} className="flex items-start gap-3">
                                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
                                     {index + 1}
-                    </div>
+                                </div>
                                 <p className="text-indigo-800">{step.text}</p>
                             </div>
                         ))}
-                        </div>
+                    </div>
                 </InfoBox>
 
                 <WalletConnect />
 
-                {/* Add the ProofSubmission component here */}
                 <ProofSubmission />
 
                 <InfoBox
