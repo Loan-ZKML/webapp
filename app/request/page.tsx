@@ -17,7 +17,7 @@ const RequestPage = () => {
     ];
 
     return (
-        <PageLayout size="md">
+        <PageLayout size="lg">
             <div className="space-y-8 relative">
                 <NavBar backLink='/' />
 
