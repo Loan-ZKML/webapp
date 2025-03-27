@@ -1,18 +1,26 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Code2, Terminal, FileCode, CheckCircle2, Send } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
 import InfoBox from '@/components/InfoBox';
 import NavBar from '@/components/NavBar';
 import Title from '@/components/Title';
+import NavigationBox from '@/components/NavigationBox';
+
 
 const GuidePage = () => {
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        setIsLoaded(true);
+    }, []);
+
     const steps = [
         {
             icon: Code2,
             title: 'Install Required Tools',
             description: 'First, you\'ll need to install the necessary tools to generate your proof.',
-            codeExample: '# Code example will go here'
+            codeExample: '# Clone the repo\ngit clone https://github.com/loan-zkml/Ezkl-ML.git && cd src\n\n# Install Python dependencies\npip install torch numpy onnx\n\n# Install EZKL following instructions at https://github.com/zkonduit/ezkl'
         },
         {
             icon: Terminal,
@@ -32,16 +40,10 @@ const GuidePage = () => {
             description: 'Ensure your proof is valid before submission.',
             codeExample: '// Code example will go here'
         },
-        {
-            icon: Send,
-            title: 'Submit Your Proof',
-            description: 'Submit your proof to the smart contract.',
-            codeExample: '// Code example will go here'
-        }
     ];
 
     return (
-        <PageLayout size="md"  >
+        <PageLayout size="lg"  >
             <div className="space-y-6">
                 <NavBar backLink='/request' />
 
@@ -61,6 +63,16 @@ const GuidePage = () => {
                             codeExample={step.codeExample}
                         />
                     ))}
+                               
+
+            <NavigationBox
+                href="/request"
+                icon={Send}
+                title="Submit Your Proof"
+                description="Ready to submit? Go to the request page"
+                variant="indigo"
+                />
+                    
                 </div>
             </div>
         </PageLayout>

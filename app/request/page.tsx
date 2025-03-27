@@ -7,6 +7,7 @@ import InfoBox from '@/components/InfoBox';
 import NavigationBox from '@/components/NavigationBox';
 import NavBar from '@/components/NavBar';
 import Title from '@/components/Title';
+import ProofSubmission from '@/components/ProofSubmission'; // Import the new component
 
 const RequestPage = () => {
     const steps = [
@@ -35,14 +36,17 @@ const RequestPage = () => {
                             <div key={index} className="flex items-start gap-3">
                                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold">
                                     {index + 1}
-                                </div>
+                    </div>
                                 <p className="text-indigo-800">{step.text}</p>
                             </div>
                         ))}
-                    </div>
+                        </div>
                 </InfoBox>
 
                 <WalletConnect />
+
+                {/* Add the ProofSubmission component here */}
+                <ProofSubmission />
 
                 <InfoBox
                     title="Need help generating a proof?"
