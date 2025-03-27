@@ -16,7 +16,7 @@ interface SubmissionState {
     calldataText: string;
     isUploading: boolean;
     isSubmitting: boolean;
-    isSubmitted: boolean; 
+    isSubmitted: boolean;
     errorMessage: string;
     successMessage: string;
     collateralDetails: CollateralDetails | null;
@@ -172,17 +172,17 @@ const ProofSubmission = () => {
 
     // Render submission form or success state
     if (state.isSubmitted) {
-        return <SuccessSection 
-            collateralDetails={state.collateralDetails} 
-            transactionHash={state.transactionHash} 
-            onReset={handleReset} 
+        return <SuccessSection
+            collateralDetails={state.collateralDetails}
+            transactionHash={state.transactionHash}
+            onReset={handleReset}
         />;
     }
 
     return (
         <div className="space-y-6">
             {/* Check collateral section - show only when not in submission process */}
-            {!state.isSubmitting && <CollateralSection />}
+            {/* {!state.isSubmitting && <CollateralSection />} */}
 
             {/* Proof submission section */}
             <InfoBox
@@ -313,10 +313,10 @@ const StatusMessages = ({ errorMessage, successMessage }: {
 );
 
 // Success section as a separate component with upgraded styling
-const SuccessSection = ({ 
-    collateralDetails, 
-    transactionHash, 
-    onReset 
+const SuccessSection = ({
+    collateralDetails,
+    transactionHash,
+    onReset
 }: {
     collateralDetails: CollateralDetails | null;
     transactionHash: string | null;

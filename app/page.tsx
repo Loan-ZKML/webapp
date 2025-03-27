@@ -44,15 +44,15 @@ const Home = () => {
           </Link>
 
           <Link
-            href="/verify"
+            href="/status"
             className={`block p-4 rounded-xl border-l-4 border-l-gray-400 bg-gradient-to-r from-gray-50 to-white shadow-sm transition-all duration-300 ${isLoaded ? 'translate-x-0 opacity-100' : 'translate-x-2 opacity-0'} opacity-50 cursor-not-allowed`}
             style={{ transitionDelay: '300ms' }}
             onClick={(e) => e.preventDefault()}
           >
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-gray-700">Check Application Status</h2>
-                <p className="text-gray-500 text-sm mt-1">View your verification results</p>
+                <h2 className="text-xl font-semibold text-gray-700">Get Collateral Tier</h2>
+                <p className="text-gray-500 text-sm mt-1">View your current collateral terms</p>
               </div>
               <div className="bg-gray-400 text-white p-2 rounded-full">
                 <ArrowRight size={18} />
