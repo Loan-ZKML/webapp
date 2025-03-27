@@ -1,9 +1,9 @@
 import React from 'react'
 
-const VerifyPage = () => {
+const StatusPage = () => {
     return (
-        <div>Verify Page</div>
+        <div>Status page</div>
     )
 }
 
-export default VerifyPage
+export default StatusPage

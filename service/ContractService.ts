@@ -12,15 +12,15 @@ import { CreditApplicant } from '@/types/zkml';
 import { CreditTier, CollateralRequirement } from '@/types/contract'
 import { LOAN_MANAGER_ABI } from './abi/CreditScoreLoanManager';
 
-const CONTRACT_ADDRESS = 'TODO'; // TODO: deploy & get contract address
-const SEPOLIA_CHAIN_ID = 11155111;
+const CONTRACT_ADDRESS = '0x4ebEA61E6a2E4e9E4EcCC84711f001a13';
+const ANVIL_CHAIN_ID = 31337; // standard chain ID for Anvil
 
 // Service for interacting with the smart contract
 export class ContractService {
     private provider: ethers.BrowserProvider | null = null; // connects to the network
     private contract: ethers.Contract | null = null; // the deployed contract
     private signer: ethers.Signer | null = null; // the user's account
-    private readonly chainId = SEPOLIA_CHAIN_ID; // TODO currently sepolia
+    private readonly chainId = ANVIL_CHAIN_ID;
     private connecting: boolean = false; // Add this line
 
     constructor() {
@@ -242,6 +242,10 @@ export class ContractService {
 
         const network = await this.provider.getNetwork();
         const currentChainId = Number(network.chainId);
+
+        if (process.env.NODE_ENV === 'development' && currentChainId === this.chainId) {
+            return true;
+        }
 
         if (currentChainId !== this.chainId) {
             try {
