@@ -1,11 +1,21 @@
 import { ParsedProofData, ProofFileData, ProofValidationResult } from '../types/proof';
 
 export class ProofParserService {
-    async readBinaryFile(file: File): Promise<ProofFileData> {
+
+    /**
+     * Reads a binary file and returns ArrayBuffer
+     * @param file The file to read
+     * @returns ArrayBuffer of file content
+     */
+    async readBinaryFile(file: File): Promise<{ bytes: Uint8Array, hexString: string }> {
         try {
+            // Read the file as an ArrayBuffer
             const arrayBuffer = await file.arrayBuffer();
             const bytes = new Uint8Array(arrayBuffer);
+
+            // Convert to hex string for internal representation
             const hexString = '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
             console.log(`Read ${bytes.length} bytes from ${file.name}`);
             return { bytes, hexString };
         } catch (error) {
@@ -31,6 +41,11 @@ export class ProofParserService {
         }
     }
 
+    /**
+     * Parses calldata from a string representation
+     * @param data String containing proof data (hex or JSON)
+     * @returns Parsed proof and public inputs
+     */
     private parseCalldata(data: string): ParsedProofData | null {
         if (typeof data === 'string' && data.startsWith('0x')) {
             return this.parseEZKLCalldata(data);
@@ -69,6 +84,11 @@ export class ProofParserService {
         };
     }
 
+    /**
+     * Parses EZKL calldata format
+     * @param hexData Hex string starting with 0x
+     * @returns Parsed proof data
+     */
     private parseEZKLCalldata(hexData: string): ParsedProofData {
         const hexString = hexData.startsWith('0x') ? hexData.slice(2) : hexData;
         const bytes = new Uint8Array(hexString.match(/.{1,2}/g)?.map((byte: string) => parseInt(byte, 16)) || []);
